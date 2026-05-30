@@ -6,13 +6,6 @@ Uso:
 
 Ejemplo:
     python upload.py example.py as main.py --board example
-
-Que hace:
-    1. Calcula el md5 del archivo
-    2. Levanta un HTTP server temporal sirviendo el archivo
-    3. Publica en boards/<board> el JSON {url, dest, hash}
-    4. Espera hasta que la placa descargue el archivo (o timeout)
-    5. Cierra el HTTP server
 """
 
 import argparse
@@ -45,31 +38,30 @@ def get_local_ip():
         s.close()
 
 
-def md5_file(path):
-    h = hashlib.md5()
-    with open(path, "rb") as f:
-        h.update(f.read())
-    return h.hexdigest()
+def sha256_file(path):
+    """sha256 sobre el contenido leido como texto (igual que la placa: r.text.encode())"""    with open(path, "r", encoding="utf-8", newline="") as f:
+        content = f.read()
+    return hashlib.sha256(content.encode("utf-8")).hexdigest(), content
 
 
-def serve_file(filepath, port, stop_event):
-    """Sirve un unico archivo en GET / hasta que stop_event se active."""
-    filename = os.path.basename(filepath)
-
+def serve_file(content_bytes, filename, port, stop_event):
+    """Sirve el contenido en GET /<filename> hasta que stop_event se active."""
     class Handler(http.server.BaseHTTPRequestHandler):
         def do_GET(self):
-            with open(filepath, "rb") as f:
-                data = f.read()
-            self.send_response(200)
-            self.send_header("Content-Type", "text/plain")
-            self.send_header("Content-Length", str(len(data)))
-            self.end_headers()
-            self.wfile.write(data)
-            print(f"[HTTP] Archivo servido a {self.client_address[0]}")
-            stop_event.set()  # Detener tras primera descarga exitosa
+            if self.path.lstrip("/") == filename or self.path == "/":
+                self.send_response(200)
+                self.send_header("Content-Type", "text/plain")
+                self.send_header("Content-Length", str(len(content_bytes)))
+                self.end_headers()
+                self.wfile.write(content_bytes)
+                print(f"[HTTP] Servido a {self.client_address[0]}")
+                stop_event.set()
+            else:
+                self.send_response(404)
+                self.end_headers()
 
         def log_message(self, format, *args):
-            pass  # silenciar logs por defecto
+            pass
 
     server = http.server.HTTPServer(("", port), Handler)
     server.timeout = 1
@@ -97,30 +89,29 @@ def main():
         print(f"Error: no existe {filepath}")
         sys.exit(1)
 
-    file_hash = md5_file(filepath)
+    file_hash, content_str = sha256_file(filepath)
+    content_bytes = content_str.encode("utf-8")
     local_ip  = get_local_ip()
     topic     = f"boards/{args.board}"
-    url       = f"http://{local_ip}:{HTTP_PORT}/{os.path.basename(filepath)}"
+    filename  = os.path.basename(filepath)
+    url       = f"http://{local_ip}:{HTTP_PORT}/{filename}"
 
     print(f"[upload] Archivo : {filepath}")
     print(f"[upload] Destino : {args.dest}")
     print(f"[upload] Board   : {args.board}")
     print(f"[upload] Topico  : {topic}")
     print(f"[upload] URL     : {url}")
-    print(f"[upload] MD5     : {file_hash}")
+    print(f"[upload] SHA256  : {file_hash}")
 
-    # Evento: placa descargo el archivo
     downloaded = threading.Event()
-    # Evento: placa confirmo OTA via MQTT
     confirmed  = threading.Event()
-
-    # HTTP server en hilo separado
-    http_thread = threading.Thread(target=serve_file, args=(filepath, HTTP_PORT, downloaded), daemon=True)
-    http_thread.start()
-    time.sleep(0.3)  # Dar tiempo al server a arrancar
-
-    # MQTT
     result_holder = {}
+
+    http_thread = threading.Thread(
+        target=serve_file, args=(content_bytes, filename, HTTP_PORT, downloaded), daemon=True
+    )
+    http_thread.start()
+    time.sleep(0.3)
 
     def on_message(client, userdata, msg):
         payload = msg.payload.decode()
@@ -134,17 +125,13 @@ def main():
     mc.subscribe(topic)
     mc.loop_start()
 
-    # Publicar OTA command
     payload = json.dumps({"url": url, "dest": args.dest, "hash": file_hash})
     mc.publish(topic, payload)
-    print(f"[upload] OTA publicado. Esperando descarga (timeout {args.timeout}s)...")
+    print(f"[upload] OTA publicado. Esperando confirmacion (timeout {args.timeout}s)...")
 
-    # Esperar confirmacion MQTT (placa publica 'true' o 'false')
     ok = confirmed.wait(timeout=args.timeout)
     mc.loop_stop()
     mc.disconnect()
-
-    # Asegurar que HTTP cierre
     downloaded.set()
     http_thread.join(timeout=3)
 

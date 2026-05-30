@@ -4,7 +4,7 @@ import machine, time, os, urequests, uhashlib, ubinascii
 # Uso: ota_update(url, dest, expected_hash, mqtt_client, topic)
 #   url           — URL HTTP donde bajar el archivo
 #   dest          — nombre final en la placa (ej: 'main.py')
-#   expected_hash — md5 hex string para verificar integridad
+#   expected_hash — sha256 hex string para verificar integridad
 #   mqtt_client   — instancia MQTTClient ya conectada (para publicar resultado)
 #   topic         — topico donde publicar 'true'/'false'
 
@@ -33,8 +33,8 @@ def ota_update(url, dest, expected_hash, mqtt_client=None, topic=None):
             _publish("false")
             return False
 
-        # Verificar hash md5
-        h = uhashlib.md5(code.encode()).digest()
+        # Verificar hash sha256
+        h = uhashlib.sha256(code.encode()).digest()
         actual_hash = ubinascii.hexlify(h).decode()
         if actual_hash != expected_hash:
             print("Hash no coincide:", actual_hash, "!=", expected_hash)
