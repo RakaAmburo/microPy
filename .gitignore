@@ -28,3 +28,9 @@ desktop.ini
 
 # Archivos temporales OTA
 main_tmp.py
+
+# Herramientas locales de infra (no parte del repo)
+infra/micropython_mcp.py
+infra/webrepl_cli.py
+infra/venv/
+infra/*.log
