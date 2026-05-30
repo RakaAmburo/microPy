@@ -39,7 +39,8 @@ def get_local_ip():
 
 
 def sha256_file(path):
-    """sha256 sobre el contenido leido como texto (igual que la placa: r.text.encode())"""    with open(path, "r", encoding="utf-8", newline="") as f:
+    """sha256 sobre el contenido leido como texto (igual que la placa: r.text.encode())"""
+    with open(path, "r", encoding="utf-8", newline="") as f:
         content = f.read()
     return hashlib.sha256(content.encode("utf-8")).hexdigest(), content
 
