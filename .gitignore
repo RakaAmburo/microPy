@@ -1,0 +1,30 @@
+# Credenciales sensibles
+secrets.py
+
+# MicroPython compiled
+*.mpy
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# IDEs
+.idea/
+.vscode/
+*.sublime-*
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+desktop.ini
+
+# Archivos temporales OTA
+main_tmp.py
