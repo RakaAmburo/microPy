@@ -1,25 +1,73 @@
-import machine, time, os, urequests
+import machine, time, os, urequests, uhashlib, ubinascii
 
-# --- OTA ---
-URL = "http://192.168.1.157:8000/main.py"
-def ota_update(url=URL):
+# --- OTA via MQTT ---
+# Uso: ota_update(url, dest, expected_hash, mqtt_client, topic)
+#   url           — URL HTTP donde bajar el archivo
+#   dest          — nombre final en la placa (ej: 'main.py')
+#   expected_hash — md5 hex string para verificar integridad
+#   mqtt_client   — instancia MQTTClient ya conectada (para publicar resultado)
+#   topic         — topico donde publicar 'true'/'false'
+
+def ota_update(url, dest, expected_hash, mqtt_client=None, topic=None):
+    tmp_file = "_ota_tmp.py"
+    def _publish(msg):
+        if mqtt_client and topic:
+            try:
+                mqtt_client.publish(topic, msg)
+            except Exception as e:
+                print("MQTT publish error:", e)
+
     try:
+        print("OTA: descargando", url)
         r = urequests.get(url)
+        if r.status_code != 200:
+            print("Error HTTP:", r.status_code)
+            r.close()
+            _publish("false")
+            return False
         code = r.text
         r.close()
+
         if not code.strip():
             print("Error: archivo vacío")
+            _publish("false")
             return False
-        tmp_file = "main_tmp.py"
-        with open(tmp_file,"w") as f:
+
+        # Verificar hash md5
+        h = uhashlib.md5(code.encode()).digest()
+        actual_hash = ubinascii.hexlify(h).decode()
+        if actual_hash != expected_hash:
+            print("Hash no coincide:", actual_hash, "!=", expected_hash)
+            _publish("false")
+            return False
+
+        # Escribir temporal
+        with open(tmp_file, "w") as f:
             f.write(code)
-        size = os.stat(tmp_file)[6]
-        os.remove("main.py") if "main.py" in os.listdir() else None
-        os.rename(tmp_file,"main.py")
-        print("main.py reemplazado:", size, "bytes")
+
+        if os.stat(tmp_file)[6] == 0:
+            print("Error: archivo temporal vacío")
+            os.remove(tmp_file)
+            _publish("false")
+            return False
+
+        # Reemplazar destino
+        if dest in os.listdir():
+            os.remove(dest)
+        os.rename(tmp_file, dest)
+        print("OTA OK:", dest, os.stat(dest)[6], "bytes")
+
+        _publish("true")
         time.sleep(0.5)
         machine.reset()
         return True
+
     except Exception as e:
         print("Error OTA:", e)
+        try:
+            if tmp_file in os.listdir():
+                os.remove(tmp_file)
+        except:
+            pass
+        _publish("false")
         return False
