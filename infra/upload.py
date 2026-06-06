@@ -39,13 +39,10 @@ def get_local_ip():
 
 
 def sha256_file(path):
-    """sha256 sobre el contenido normalizado a LF (igual que la placa ejecuta)"""
+    """sha256 sobre el contenido normalizado a LF"""
     with open(path, "rb") as f:
         raw = f.read()
-    # Normalizar a LF para que hash y contenido servido sean consistentes
-    normalized = raw.replace(b"
-", b"
-")
+    normalized = raw.replace(b"\r\n", b"\n")
     return hashlib.sha256(normalized).hexdigest(), normalized
 
 
