@@ -65,7 +65,7 @@ def serve_file(content_bytes, filename, port, stop_event):
             pass
 
     server = http.server.HTTPServer(("", port), Handler)
-    server.timeout = 1
+    server.timeout = 10
     while not stop_event.is_set():
         server.handle_request()
     server.server_close()
