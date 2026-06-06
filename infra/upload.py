@@ -39,11 +39,10 @@ def get_local_ip():
 
 
 def sha256_file(path):
-    """sha256 sobre el contenido normalizado a LF"""
-    with open(path, "rb") as f:
-        raw = f.read()
-    normalized = raw.replace(b"\r\n", b"\n")
-    return hashlib.sha256(normalized).hexdigest(), normalized
+    """sha256 sobre el contenido leido como texto (igual que la placa: r.text.encode())"""
+    with open(path, "r", encoding="utf-8", newline="") as f:
+        content = f.read()
+    return hashlib.sha256(content.encode("utf-8")).hexdigest(), content.encode("utf-8")
 
 
 def serve_file(content_bytes, filename, port, stop_event):
@@ -66,7 +65,7 @@ def serve_file(content_bytes, filename, port, stop_event):
             pass
 
     server = http.server.HTTPServer(("", port), Handler)
-    server.timeout = 10
+    server.timeout = 30
     while not stop_event.is_set():
         server.handle_request()
     server.server_close()
