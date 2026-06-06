@@ -5,6 +5,8 @@ import secrets
 from otatools import ota_update, handle_ping, TOPIC_PING
 
 # --- Configuracion --- python upload.py example.py as main.py --board example
+# --- mpremote connect COM9 exec "exec(open('main.py').read())"
+# --- python pub.py "casa/calefaccion" "casa/calefaccion/state" "off"
 MQTT_BROKER  = "192.168.1.135"
 MQTT_PORT    = 1883
 BOARD_NAME   = "example"

@@ -36,6 +36,7 @@ def ota_update(url, dest, expected_hash, mqtt_client=None, topic=None):
         # Verificar hash sha256
         h = uhashlib.sha256(code.encode()).digest()
         actual_hash = ubinascii.hexlify(h).decode()
+        print("HASH_CALCULADO:", actual_hash)
         if actual_hash != expected_hash:
             print("Hash no coincide:", actual_hash, "!=", expected_hash)
             _publish("false")
@@ -58,7 +59,7 @@ def ota_update(url, dest, expected_hash, mqtt_client=None, topic=None):
         print("OTA OK:", dest, os.stat(dest)[6], "bytes")
 
         _publish("true")
-        time.sleep(0.5)
+        time.sleep(5)
         machine.reset()
         return True
 
