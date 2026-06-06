@@ -63,7 +63,7 @@ def ota_update(url, dest, expected_hash, mqtt_client=None, topic=None):
         return True
 
     except Exception as e:
-        print("Error OTA:", e)
+        print("Error OTA:", type(e).__name__, e)
         try:
             if tmp_file in os.listdir():
                 os.remove(tmp_file)
