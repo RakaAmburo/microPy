@@ -2,7 +2,7 @@ import network, time
 from umqtt.simple import MQTTClient
 import ujson
 import secrets
-from otatools import ota_update
+from otatools import ota_update, handle_ping, TOPIC_PING
 
 # --- Configuracion --- python upload.py example.py as main.py --board example
 MQTT_BROKER  = "192.168.1.135"
@@ -27,6 +27,9 @@ def callback(topic, msg):
     m = msg.decode()
     print(f"MQTT [{t}]: {m}")
 
+    if handle_ping(t, client, BOARD_NAME):
+        return
+
     if t == TOPIC_OTA:
         try:
             data = ujson.loads(m)
@@ -44,7 +47,8 @@ client.set_callback(callback)
 client.connect()
 client.subscribe(TOPIC_OTA.encode())
 client.subscribe(TOPIC_CMD.encode())
-print(f"Escuchando en {TOPIC_OTA} y {TOPIC_CMD}")
+client.subscribe(TOPIC_PING.encode())
+print(f"Escuchando en {TOPIC_OTA}, {TOPIC_CMD} y {TOPIC_PING}")
 
 while True:
     client.check_msg()

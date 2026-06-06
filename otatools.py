@@ -71,3 +71,20 @@ def ota_update(url, dest, expected_hash, mqtt_client=None, topic=None):
             pass
         _publish("false")
         return False
+
+# --- Ping generico ---
+# Uso: handle_ping(topic, mqtt_client, board_name)
+#   Llamar desde el callback MQTT cuando topic == "boards/ping"
+#   Responde publicando board_name en "boards/pong"
+TOPIC_PING = "boards/ping"
+TOPIC_PONG = "boards/pong"
+
+def handle_ping(topic, mqtt_client, board_name):
+    if topic == TOPIC_PING:
+        try:
+            mqtt_client.publish(TOPIC_PONG, board_name)
+            print("Ping respondido:", board_name)
+        except Exception as e:
+            print("Error ping:", e)
+        return True
+    return False
