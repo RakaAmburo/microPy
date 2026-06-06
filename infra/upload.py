@@ -39,10 +39,11 @@ def get_local_ip():
 
 
 def sha256_file(path):
-    """sha256 sobre el contenido leido como texto (igual que la placa: r.text.encode())"""
-    with open(path, "r", encoding="utf-8", newline="") as f:
-        content = f.read()
-    return hashlib.sha256(content.encode("utf-8")).hexdigest(), content
+    """sha256 sobre los bytes raw del archivo (igual que la placa recibe via HTTP)"""
+    with open(path, "rb") as f:
+        content_bytes = f.read()
+    content = content_bytes.decode("utf-8")
+    return hashlib.sha256(content_bytes).hexdigest(), content_bytes
 
 
 def serve_file(content_bytes, filename, port, stop_event):
@@ -90,8 +91,7 @@ def main():
         print(f"Error: no existe {filepath}")
         sys.exit(1)
 
-    file_hash, content_str = sha256_file(filepath)
-    content_bytes = content_str.encode("utf-8")
+    file_hash, content_bytes = sha256_file(filepath)
     local_ip  = get_local_ip()
     topic     = f"boards/{args.board}"
     filename  = os.path.basename(filepath)
