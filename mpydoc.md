@@ -1,0 +1,112 @@
+https://micropython.org/download/
+esptool --port COM4 write_flash 0x1000 .\ESP8266_GENERIC-20251209-v1.27.0.bin
+
+
+
+1. mpremote connect COM4 cp main.py :
+2. mpremote connect COM4 repl
+3. (Editar main.py en VS Code y guardar)
+4. >>> import main
+5. >>> import importlib
+6. >>> importlib.reload(main)
+
+esptool --port COM4 --baud 460800 write_flash --flash_size=detect -fm dout 0 .\ESP8266_GENERIC-20251209-v1.27.0.bin
+
+mpremote ls
+mpremote connect list
+mpremote connect COM4 cp main.py :
+mpremote connect COM4 run main.py
+
+
+ESP32 WROOM BLE
+esptool --port COM5 erase_flash
+esptool --port COM5 --baud 460800 write_flash 0x1000 {bin}
+
+c3 mini
+esptool --port COM6 erase_flash
+esptool --port COM6 --baud 460800 write_flash 0 {bin}
+
+OTA:
+# ESP32 OTA + WebREPL - todo listo para copiar y pegar
+
+# --- boot.py ---
+import network, time
+w = network.WLAN(network.STA_IF)
+w.active(True)
+w.connect("TU_WIFI","TU_PASS")
+while not w.isconnected(): time.sleep(0.2)
+print("WiFi OK")
+
+# --- main.py ---
+import urequests, machine
+print("App v1")
+def ota_update():
+    r = urequests.get("http://TU_SERVER/main.py")
+    open("main.py","w").write(r.text)
+    r.close()
+    machine.reset()
+
+# Llamar ota_update() cuando quieras actualizar
+# ota_update()
+
+# --- WebREPL configuración ---
+# Conectarse por USB o mpremote: mpremote connect COM4 repl
+# Ejecutar en REPL:
+# import webrepl_setup
+# Seguir instrucciones (activar y poner contraseña)
+import machine
+machine.reset()
+
+# --- Conexión WebREPL ---
+# Abrir navegador: https://micropython.org/webrepl/
+# Poner IP del ESP32 + contraseña
+# Ejecutar en WebREPL: from main import ota_update; ota_update()
+
+python -m http.server 8000
+en la carpeta de main.py
+
+python webrepl_cli.py -p 1234 ws://192.168.1.179:8266/
+
+import webrepl
+webrepl.start()
+
+
+import upip
+upip.install('picoweb')
+
+
+# Python pyminifier
+pyminifier --remove-comments microdot.py > microdot_min.py
+
+# O manual con sed (Linux/Mac)
+sed '/^[ \t]*#/d; /^"""/,/^"""/d; /^[ \t]*$/d' microdot.py
+# Instalar en tu computadora
+pip install pyminifier
+
+# Minificar un archivo
+pyminifier --remove-comments microdot.py > microdot_min.py
+
+# O más agresivo (también renombra variables)
+pyminifier --obfuscate microdot.py > microdot_min.py
+
+import esp
+import gc
+import os
+
+# 1. MEMORIA RAM
+print("=== RAM ===")
+print("Libre:", gc.mem_free(), "bytes")       # Memoria disponible AHORA
+print("Total :", gc.mem_alloc() + gc.mem_free(), "bytes")  # Total RAM
+
+# 2. MEMORIA FLASH (almacenamiento)
+print("\n=== FLASH ===")
+print("Total:", esp.flash_size(), "bytes")    # Tamaño total flash
+fs_stat = os.statvfs('/')
+print("Libre:", fs_stat[0] * fs_stat[3], "bytes")  # Bytes libres en filesystem
+
+# 3. RESUMEN
+print("\n=== RESUMEN ===")
+print("RAM libre:  {:,} bytes".format(gc.mem_free()))
+print("Flash libre: {:,} bytes".format(fs_stat[0] * fs_stat[3]))
+
+python -m http.server 8001
